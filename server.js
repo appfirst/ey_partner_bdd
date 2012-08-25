@@ -80,12 +80,21 @@ var sendRequest = function(method, dest_url, jsonData, handleResponse){
       postData += postDataChunk;
     });
     response.on("end", function(){
+      var statusCode = response.statusCode,
+          headers = response.headers;
+      if (response.headers["Content-Type"] == "text/html"){
+        console.log("%s<= response%s %s, %s, %s", MAGENTA, RESET, statusCode, JSON.stringify(headers), "[HTML Content]");
+      } else {
+        console.log("%s<= response%s %s, %s, %s", MAGENTA, RESET, statusCode, JSON.stringify(headers), postData);
+      }
       handleResponse(request, response, postData);
     });
   })
 
   request.write(strData);
   request.end();
+  console.log("\n");
+  console.log("%s=> request%s to %s", MAGENTA, RESET, dest_url);
 }
 
 var authenticate = function(request){
@@ -265,7 +274,7 @@ var ey_deprovision = function(response, pathname, data) {
 }
 
 var ey_account_msg = function(response, pathname, data){
-  sendResponse(response, 200, {}, "Will send Registration request");
+  sendResponse(response, 200, {}, "Will send service account message");
   var reqJson = {
     "message": {
       "message_type": "notification",
@@ -280,7 +289,7 @@ var ey_account_msg = function(response, pathname, data){
 }
 
 var ey_provisioned_service_msg = function(response, pathname, data){
-  sendResponse(response, 200, {}, "Will send Registration request");
+  sendResponse(response, 200, {}, "Will send provisioned service message");
   var reqJson = {
     "message": {
       "message_type": "notification",
@@ -288,21 +297,21 @@ var ey_provisioned_service_msg = function(response, pathname, data){
       "body":         "And a db_slave, spiffy!",
                       // Optional, will show as collapsed until user clicks 'read more'
     }
-  }
+  };
   sendRequest("POST", ey_registration_url, reqJson, function (request, response, postData){
     console.log("%s[/]%s - provisioned service msg sent", GREEN, RESET);
   });
 }
 
 var ey_billing = function(response, pathname, data){
-  sendResponse(response, 200, {}, "Will send Registration request");
+  sendResponse(response, 200, {}, "Will send invoices");
   var reqJson = {
     "invoice":
     {
       "total_amount_cents":     "3050", //USD amount in cents ($30.50)
       "line_item_description":  "Invoice ID: 122. For service from Jan 1 to Feb 1 of 2012, rendered in a complimentary fashion.",
     }
-}
+  };
   sendRequest("POST", ey_registration_url, reqJson, function (request, response, postData){
     console.log("%s[/]%s - invoices sent", GREEN, RESET);
   });
@@ -406,12 +415,16 @@ var handleRequest = function(request, response, postData){
       sendResponse(response, 403, {'Content-Type': 'text/plain'}, "Access Denied");
     }    
   } else if (pathname.search("/ey/test/registration") >= 0 && method == "PUT") {
+    logRequest(request, postData);
     ey_register_partner(response, pathname, postData);
   } else if (pathname.search("/ey/test/account_message") >= 0 && method == "PUT") {
+    logRequest(request, postData);
     ey_register_partner(response, pathname, postData);
   } else if (pathname.search("/ey/test/provision_message") >= 0 && method == "PUT") {
+    logRequest(request, postData);
     ey_register_partner(response, pathname, postData);
   } else if (pathname.search("/ey/test/invoices") >= 0 && method == "PUT") {
+    logRequest(request, postData);
     ey_billing(response, pathname, postData);
   } else {
     logRequest(request, postData);
@@ -421,7 +434,8 @@ var handleRequest = function(request, response, postData){
 
 http.createServer(function (request, response) {
   var postData = "";
-  console.log("\n%s=> request%s from %s", MAGENTA, RESET, request.connection.remoteAddress);
+  console.log("\n");
+  console.log("%s=> request%s from %s", MAGENTA, RESET, request.connection.remoteAddress);
   request.setEncoding("utf8");
   request.addListener("data", function(postDataChunk) {
     postData += postDataChunk;
@@ -429,10 +443,6 @@ http.createServer(function (request, response) {
 
   request.addListener("end", function() {
     handleRequest(request, response, postData);
-  });
-
-  request.addListener("error", function(err) {
-    console.log("\n%sERROR%s socket hanging up from %s", RED, RESET, request.connection.remoteAddress);
   });
 }).listen(LISTEN_PORT, LISTEN_ADDR);
 

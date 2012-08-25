@@ -129,20 +129,22 @@ http.createServer(function (request, response) {
 
 describe('Engine Yard Add-on Test', function(){
 
-  // * * * * * * * * * * * * * * * * * * * * * * * * * * *
-  // *                                                   *
-  // *          1) Partner Service Registration          *
-  // *                                                   *
-  // * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  //   * * * *                                         * * * *
+  //     * * *    1) Partner Service Registration      * * *
+  //       * *                                         * * 
+  //     * * * * * * * * * * * * * * * * * * * * * * * * * * 
+  //   * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
   // saved values
   var create_account_url = ""; //= config["registration"]["create_account_url"];
   var vars = [];
 
   describe('1) Partner Service Registration', function(){
-    // ==========================================
-    // ========== REGISTER PARTNERSHIP ==========
-    // ==========================================
+    // ==============================================
+    // ========== Register Partner Service ==========
+    // ==============================================
     describe("When register a partner service || POST to <service_registration_url>", function(){
       var jsonData = {};
       it("should send a request", function(done){
@@ -175,9 +177,9 @@ describe('Engine Yard Add-on Test', function(){
         });
       })
     });
-    // ========================================
-    // ========== UPDATE PARTNERSHIP ==========
-    // ========================================
+    // ============================================
+    // ========== Update Partner Service ==========
+    // ============================================
     describe("When send a update request || PUT to <engineyard.url>", function(){
       var postData = JSON.stringify({
         "service": {
@@ -203,13 +205,13 @@ describe('Engine Yard Add-on Test', function(){
     });
   })
 
-//------------------------------------------------------------------------------------------------
-  
-  // * * * * * * * * * * * * * * * * * * * * * *
-  // *                                         *
-  // *          2) Service Enablement          *
-  // *                                         *
-  // * * * * * * * * * * * * * * * * * * * * * *
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  //   * * * *                                         * * * *
+  //     * * *      2) Service Enablement Part 1       * * *
+  //       * *                                         * *
+  //     * * * * * * * * * * * * * * * * * * * * * * * * * *
+  //   * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
   // saved values
   var service_account_url = "";
@@ -218,9 +220,9 @@ describe('Engine Yard Add-on Test', function(){
   var provision_url = "";
 
   describe('2) Service Enablement for User Account', function(){
-    // ====================================
-    // ========== CREATE ACCOUNT ==========
-    // ====================================
+    // ============================================
+    // ========== Create Service Account ==========
+    // ============================================
     describe("When create partner account || POST to <service.service_accounts_url>", function(){
       describe('HTTP Response', function(){
         var reqJson =  {
@@ -274,56 +276,103 @@ describe('Engine Yard Add-on Test', function(){
             }
           });
 
-          describe("Account Configuration", function(){
-            if (configuration_required){
-              describe("When <configuration_required> is True || GET to <service_account.configuration_url>", function(){
-                it('', function(){
-                  configuration_url += getHmac();
-                  sendRequest("GET", configuration_url, "", function(req, resp, postData){
-                    resp.statusCode.should.equal(200);
-                    resp.should.be.html;
-                    done();
-                  });
-                  // TODO
-                  /*
-                    Service is not yet considered active (can’t be provisioned or billed)
-                    User is redirected to configuration_url via SSO
-                    When configuration is completed:
-                    The partner should redirect the user (or provide a link) to ey_return_to_url
-                    The partner should make an API call to Engine Yard to note that config is complete
-                  */
-                });
-              })
-            }
-          });
+          
         });
       });
     });
-
-    describe("When cancel partner account || DELETE to <service_account.url>", function(){
-      describe('HTTP Response', function(){
-        it('should response 200 OK', function(done){
-          sendRequest("DELETE", service_account_url, "", function(req, resp, postData){
-            resp.statusCode.should.equal(200);
-            done();
+    // ============================================
+    // ========== Configure Service Account ==========
+    // ============================================
+    describe("Account Configuration", function(){
+      if (configuration_required){
+        describe("When <configuration_required> is True || GET to <service_account.configuration_url>", function(){
+          it('', function(){
+            configuration_url += getHmac();
+            sendRequest("GET", configuration_url, "", function(req, resp, postData){
+              resp.statusCode.should.equal(200);
+              resp.should.be.html;
+              done();
+            });
+            // TODO
+            /*
+              Service is not yet considered active (can’t be provisioned or billed)
+              User is redirected to configuration_url via SSO
+              When configuration is completed:
+              The partner should redirect the user (or provide a link) to ey_return_to_url
+              The partner should make an API call to Engine Yard to note that config is complete
+            */
+          });
+          it("should validate SSO", function(){
+            
           });
         });
+      }
+      describe("When configure service account", function(){
+        it("should validate SSO", function(){
+          
+        });
+      });
+    });
+    // ==================================================
+    // ========== Send Service Account Message ==========
+    // ==================================================
+    var jsonData = {};
+    describe("When partner send service message || POST to <service_account.messages_url>", function(){
+      it("should send a request", function(done){
+        // POST to the <service_account.messages_url> create a service_account message
+        dispatcher.once("account_msg", function(request, response, postData){
+          // TODO for tenant
+          jsonData = JSON.parse(postData);
+          sendResponse(response, 201, {"Content-Type" : "application/json"}, "Created");
+          done();
+        })
+
+        sendRequest("PUT", config["test"]["account_message_url"], "", function(req, resp, postData){
+        });
+      });
+      it("should with json having the same structure as defined", function(){
+        // TODO
+      });
+    });
+    // =============================================
+    // ========== Billing Service Account ==========
+    // =============================================
+    describe("When partner send invoice || POST to <service_account.invoices_url>", function(){
+      it("should send a request", function(done){
+        // POST to the <service_account.messages_url> create a service_account message
+        dispatcher.once("invoices", function(request, response, postData){
+          // TODO for tenant
+          jsonData = JSON.parse(postData);
+          sendResponse(response, 201, {"Content-Type" : "application/json"}, "Created");
+          done();
+        })
+
+        sendRequest("PUT", config["test"]["invoices_url"], "", function(req, resp, postData){
+        });
+
+      });
+      it("should with json having the same structure as defined", function(){
+        // TODO
+        // engine yard returns 201 created
       });
     });
   });
 
-//------------------------------------------------------------------------------------------------
-  
-  // * * * * * * * * * * * * * * * * * * * * * * *
-  // *                                           *
-  // *          3) Service Provisioning          *
-  // *                                           *
-  // * * * * * * * * * * * * * * * * * * * * * * *
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  //   * * * *                                         * * * *
+  //     * * *         3) Service Provisioning         * * *
+  //       * *                                         * *
+  //     * * * * * * * * * * * * * * * * * * * * * * * * * *
+  //   * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
   // saved values
   var deprovision_url = "";
 
   describe('3) Service Provisioning', function(){
+    // =======================================
+    // ========== Provision Service ==========
+    // =======================================
     describe("When call provision API || POST to <service_account.provisioned_services_url>", function(){
       describe('HTTP Response', function(){
         var reqJson = {
@@ -369,43 +418,18 @@ describe('Engine Yard Add-on Test', function(){
         });
       });
     });
-
-    describe("When call de-provision API || DELETE to <provisioned_service.url>", function(){
-      describe('HTTP Response', function(){
-        it('should response 200 OK', function(){
-          sendRequest("DELETE", deprovision_url, "", function(req, resp, postData){
-            resp.statusCode.should.equal(200);
-          });
-        });
-      });
-    });
-
-    describe("When Configuration on user instances", function(){
-      it("should", function(){
+    // ===================================================
+    // ========== Configure Provisioned Service ==========
+    // ===================================================
+    describe("When configure provisioned service", function(){
+      it("should validate SSO", function(){
         
       });
     });
-  });
-
-  describe("4) User FeedBack", function(){
     var jsonData = {};
-    describe("When partner send service message || POST to <service_account.messages_url>", function(){
-      it("should send a request", function(done){
-        // POST to the <service_account.messages_url> create a service_account message
-        dispatcher.once("account_msg", function(request, response, postData){
-          // TODO for tenant
-          jsonData = JSON.parse(postData);
-          sendResponse(response, 201, {"Content-Type" : "application/json"}, "Created");
-          done();
-        })
-
-        sendRequest("PUT", config["test"]["account_message_url"], "", function(req, resp, postData){
-        });
-      });
-      it("should with json having the same structure as defined", function(){
-        // TODO
-      });
-    });
+    // =====================================================
+    // ========== Send Provisioned Service Message==========
+    // =====================================================
     describe("When partner send provision message || POST to <provisioned_service.messages_url>", function(){
       it("should send a request", function(done){
         // POST to the <service_account.messages_url> create a service_account message
@@ -424,27 +448,41 @@ describe('Engine Yard Add-on Test', function(){
         // TODO
       });
     });
+    // ==========================================
+    // ========== De-provision Service ==========
+    // ==========================================
+    describe("When call de-provision API || DELETE to <provisioned_service.url>", function(){
+      describe('HTTP Response', function(){
+        it('should response 200 OK', function(){
+          sendRequest("DELETE", deprovision_url, "", function(req, resp, postData){
+            resp.statusCode.should.equal(200);
+          });
+        });
+      });
+    });
   });
 
-  describe("5) Billing", function(){
-    var jsonData = {};
-    describe("When partner send invoice || POST to <service_account.invoices_url>", function(){
-      it("should send a request", function(done){
-        // POST to the <service_account.messages_url> create a service_account message
-        dispatcher.once("invoices", function(request, response, postData){
-          // TODO for tenant
-          jsonData = JSON.parse(postData);
-          sendResponse(response, 201, {"Content-Type" : "application/json"}, "Created");
-          done();
-        })
 
-        sendRequest("PUT", config["test"]["invoices_url"], "", function(req, resp, postData){
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  //   * * * *                                         * * * *
+  //     * * *      2) Service Enablement Part 1       * * *
+  //       * *                                         * *
+  //     * * * * * * * * * * * * * * * * * * * * * * * * * *
+  //   * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  describe('4) Cancellation of User Account', function(){
+    // ================================================
+    // ========== Cancelling Service Account ==========
+    // ================================================
+    describe("When cancel partner account || DELETE to <service_account.url>", function(){
+      describe('HTTP Response', function(){
+        it('should response 200 OK', function(done){
+          sendRequest("DELETE", service_account_url, "", function(req, resp, postData){
+            resp.statusCode.should.equal(200);
+            done();
+          });
         });
-
-      });
-      it("should with json having the same structure as defined", function(){
-        // TODO
-        // engine yard returns 201 created
       });
     });
   });
