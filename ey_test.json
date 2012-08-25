@@ -1,0 +1,20 @@
+{
+  "auth_id"                    : "68c2104b53521752",
+  "auth_key"                   : "fde420642d8c1a83940d71ae651388946a94818df49991d0341d83dd273626ae0cf52d2ea9938ff1",
+  "service_registration_url"   : "/api/1/partners/48/services",
+
+  "test" : {
+    "register_service_url"     : "http://localhost:8080/ey/test/registration",
+    "update_service_url"       : "http://localhost:8080/ey/test/update_service",
+    "update_account_url"       : "http://localhost:8080/ey/test/update_account",
+    "account_message_url"      : "http://localhost:8080/ey/test/account_message",
+    "provision_message_url"    : "http://localhost:8080/ey/test/provision_message",
+    "invoices_url"             : "http://localhost:8080/ey/test/invoices",
+  },
+  
+  "registration" : {
+    "home_url"                 : "http://localhost:8080",
+    "terms_and_conditions_url" : "http://localhost:8080/ey/terms",
+    "create_account_url"       : "http://localhost:8080/ey/resources"
+  }
+}
