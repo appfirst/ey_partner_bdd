@@ -16,14 +16,13 @@ var fs     = require("fs")
   //, should = chai.should()
   ;
 
-var LISTEN_ADDR = "localhost"
-  , LISTEN_PORT = 8088
+var EY_LISTEN_ADDR = "localhost"
+  , EY_LISTEN_PORT = 8088
   , URL_PATTERN = /https?:\/\/([\w\-])+(\.([\w\-])+)*(:\d+)?.*/;
 
 var Dispatcher = function() {};
 Dispatcher.prototype = new events.EventEmitter();
 var dispatcher = new Dispatcher();
-console.log(dispatcher);
 
 // ---------- config ----------
 var configPath = './ey_test.json';
@@ -121,31 +120,37 @@ http.createServer(function (request, response) {
     var path = url.parse(request.url).path;
     if (path == config["service_registration_url"] && request.method == "POST"){
       dispatcher.emit("registration", request, response, postData);
+      dispatcher.emit("account_msg", request, response, postData);
+      dispatcher.emit("provisioned_service_msg", request, response, postData);
+      dispatcher.emit("invoices", request, response, postData);
     }
   });
-}).listen(LISTEN_PORT, LISTEN_ADDR);
+}).listen(EY_LISTEN_PORT, EY_LISTEN_ADDR);
 
 describe('Engine Yard Add-on Test', function(){
-  describe('Partner Service Registration', function(){
-    describe("When register a partner service | POST to <service_registration_url>", function(){
-      var jsonData = {
-        "service": {
-           "name":                      "Compliment service"
-         , "description":               "We post friendly messages to your dashboard daily.  Sign-up is free!"
-         , "vars":     [
-            "api_key"
-          , "daily_supplement_path"]
-         , "home_url":                   "http://compliments-r-us.net"
-         , "terms_and_conditions_url":   "http://compliments-r-us.net/terms"
-         , "service_accounts_url":       "http://api.compliments-r-us.net/engineyard-api/service_accounts"
-        }
-      };
+
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  // *                                                   *
+  // *          1) Partner Service Registration          *
+  // *                                                   *
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  // saved values
+  var create_account_url = ""; //= config["registration"]["create_account_url"];
+  var vars = [];
+
+  describe('1) Partner Service Registration', function(){
+    // ==========================================
+    // ========== REGISTER PARTNERSHIP ==========
+    // ==========================================
+    describe("When register a partner service || POST to <service_registration_url>", function(){
+      var jsonData = {};
       it("should send a request", function(done){
         // POST to the <service_registration_url> provided on partner sign-up
         dispatcher.once("registration", function(request, response, postData){
           jsonData = JSON.parse(postData);
           var headers = {"Content-Type" : "application/json", 
-                         "Location"     : "http://addons.engineyard.com/api/1/partners/48/services/1232"};
+                         "Location"     : util.format("http://%s:%s/api/1/partners/48/services/1232", EY_LISTEN_ADDR, EY_LISTEN_PORT)};
           sendResponse(response, 201, headers, "Created");
           done();
         })
@@ -157,20 +162,23 @@ describe('Engine Yard Add-on Test', function(){
         it("should contain valid json post data", function(){
           jsonData.should.be.a("object");
           jsonData.should.have.keys("service");
-          jsonData.service.should.have.property("name").and.be.a('string');
-          jsonData.service.should.have.property("description").and.be.a('string');
-          jsonData.service.should.have.property("vars").and.be.an.instanceOf(Array);
+          jsonData["service"].should.have.property("name").and.be.a('string');
+          jsonData["service"].should.have.property("description").and.be.a('string');
+          jsonData["service"].should.have.property("vars").and.be.an.instanceOf(Array);
           vars = jsonData["service"]["vars"];
-          jsonData.service.should.have.property("home_url").and.match(URL_PATTERN);
-          if (jsonData.service["terms_and_conditions_url"] != null){
-            jsonData.service["terms_and_conditions_url"].should.match(URL_PATTERN);
+          jsonData["service"].should.have.property("home_url").and.match(URL_PATTERN);
+          if (jsonData["service"]["terms_and_conditions_url"] != null){
+            jsonData["service"]["terms_and_conditions_url"].should.match(URL_PATTERN);
           }
           jsonData.service.should.have.property("service_accounts_url").and.match(URL_PATTERN);
+          create_account_url = jsonData["service"]["service_accounts_url"];
         });
       })
     });
-
-    describe("When send a update request | PUT to <engineyard.url>", function(){
+    // ========================================
+    // ========== UPDATE PARTNERSHIP ==========
+    // ========================================
+    describe("When send a update request || PUT to <engineyard.url>", function(){
       var postData = JSON.stringify({
         "service": {
           "description":       "We post friendly messages to your dashboard daily.  Only $1/month."
@@ -195,22 +203,31 @@ describe('Engine Yard Add-on Test', function(){
     });
   })
 
-  var create_account_url = config["registration"]["create_account_url"];
+//------------------------------------------------------------------------------------------------
+  
+  // * * * * * * * * * * * * * * * * * * * * * *
+  // *                                         *
+  // *          2) Service Enablement          *
+  // *                                         *
+  // * * * * * * * * * * * * * * * * * * * * * *
+
+  // saved values
   var service_account_url = "";
+  var configuration_required = false;
   var configuration_url = "";
   var provision_url = "";
-  var deprovision_url = "";
-  var configuration_required = false;
-  var vars = [];
 
-  describe('Service Enablement for User Account', function(){
-    describe("When create partner account | POST to <service.service_accounts_url>", function(){
+  describe('2) Service Enablement for User Account', function(){
+    // ====================================
+    // ========== CREATE ACCOUNT ==========
+    // ====================================
+    describe("When create partner account || POST to <service.service_accounts_url>", function(){
       describe('HTTP Response', function(){
         var reqJson =  {
-          "url":          "http://services.engineyard.com/api/1/partners/48/services/1232/service_accounts/333",
+          "url":          util.format("http://%s:%s/api/1/partners/48/services/1232/service_accounts/333", EY_LISTEN_ADDR, EY_LISTEN_PORT),
           "name":         "appfirst",
-          "messages_url": "http://services.engineyard.com/api/1/partners/48/services/1232/service_accounts/333/messages",
-          "invoices_url": "http://services.engineyard.com/api/1/partners/48/services/1232/service_accounts/333/invoices",
+          "messages_url": util.format("http://%s:%s/api/1/partners/48/services/1232/service_accounts/333/messages", EY_LISTEN_ADDR, EY_LISTEN_PORT),
+          "invoices_url": util.format("http://%s:%s/api/1/partners/48/services/1232/service_accounts/333/invoices", EY_LISTEN_ADDR, EY_LISTEN_PORT),
         };
         var respJson = {};
 
@@ -234,7 +251,7 @@ describe('Engine Yard Add-on Test', function(){
           });
         });
 
-        describe('JSON in response | <service_account|message>', function(){
+        describe('JSON in response || <service_account, message>', function(){
           it('should have the valid structure', function(){
             respJson.should.have.property("service_account");
 
@@ -259,7 +276,7 @@ describe('Engine Yard Add-on Test', function(){
 
           describe("Account Configuration", function(){
             if (configuration_required){
-              describe("When <configuration_required> is True | GET to <service_account.configuration_url>", function(){
+              describe("When <configuration_required> is True || GET to <service_account.configuration_url>", function(){
                 it('', function(){
                   configuration_url += getHmac();
                   sendRequest("GET", configuration_url, "", function(req, resp, postData){
@@ -267,6 +284,7 @@ describe('Engine Yard Add-on Test', function(){
                     resp.should.be.html;
                     done();
                   });
+                  // TODO
                   /*
                     Service is not yet considered active (can’t be provisioned or billed)
                     User is redirected to configuration_url via SSO
@@ -282,7 +300,7 @@ describe('Engine Yard Add-on Test', function(){
       });
     });
 
-    describe("When cancel partner account | DELETE to <service_account.url>", function(){
+    describe("When cancel partner account || DELETE to <service_account.url>", function(){
       describe('HTTP Response', function(){
         it('should response 200 OK', function(done){
           sendRequest("DELETE", service_account_url, "", function(req, resp, postData){
@@ -294,12 +312,23 @@ describe('Engine Yard Add-on Test', function(){
     });
   });
 
-  describe('Service Provisioning', function(){
-    describe("When call provision API | POST to <service_account.provisioned_services_url>", function(){
+//------------------------------------------------------------------------------------------------
+  
+  // * * * * * * * * * * * * * * * * * * * * * * *
+  // *                                           *
+  // *          3) Service Provisioning          *
+  // *                                           *
+  // * * * * * * * * * * * * * * * * * * * * * * *
+
+  // saved values
+  var deprovision_url = "";
+
+  describe('3) Service Provisioning', function(){
+    describe("When call provision API || POST to <service_account.provisioned_services_url>", function(){
       describe('HTTP Response', function(){
         var reqJson = {
-          "url":          "http://services.engineyard.com/api/1/partners/8/services/1232/service_accounts/333/provisioned_services/32",
-          "messages_url": "http://services.engineyard.com/api/1/partners/8/services/1232/service_accounts/333/provisioned_services/32/messages",
+          "url":          util.format("http://%s:%s/api/1/partners/8/services/1232/service_accounts/333/provisioned_services/32", EY_LISTEN_ADDR, EY_LISTEN_PORT),
+          "messages_url": util.format("http://%s:%s/api/1/partners/8/services/1232/service_accounts/333/provisioned_services/32/messages", EY_LISTEN_ADDR, EY_LISTEN_PORT),
           "environment": {
             "name":          "foo_production",
             "framework_env": "production",
@@ -321,7 +350,7 @@ describe('Engine Yard Add-on Test', function(){
           });
         });
 
-        describe('JSON in response | <provisioned_service|message>', function(){
+        describe('JSON in response || <provisioned_service, message>', function(){
           it('should have the same structure as defined', function(){
             respJson.should.have.property("provisioned_service");
 
@@ -341,7 +370,7 @@ describe('Engine Yard Add-on Test', function(){
       });
     });
 
-    describe("When call de-provision API | DELETE to <provisioned_service.url>", function(){
+    describe("When call de-provision API || DELETE to <provisioned_service.url>", function(){
       describe('HTTP Response', function(){
         it('should response 200 OK', function(){
           sendRequest("DELETE", deprovision_url, "", function(req, resp, postData){
@@ -352,34 +381,67 @@ describe('Engine Yard Add-on Test', function(){
     });
 
     describe("When Configuration on user instances", function(){
-
+      it("should", function(){
+        
+      });
     });
   });
 
-  describe("User FeedBack", function(){
-    describe("When partner send service message by POST to <service_account.messages_url>", function(){
+  describe("4) User FeedBack", function(){
+    var jsonData = {};
+    describe("When partner send service message || POST to <service_account.messages_url>", function(){
       it("should send a request", function(done){
-        // POST to the <service_registration_url> provided on partner sign-up
-        sendRequest("POST", config["test"]["account_message_url"], "", function(req, resp, postData){
+        // POST to the <service_account.messages_url> create a service_account message
+        dispatcher.once("account_msg", function(request, response, postData){
+          // TODO for tenant
+          jsonData = JSON.parse(postData);
+          sendResponse(response, 201, {"Content-Type" : "application/json"}, "Created");
+          done();
+        })
+
+        sendRequest("PUT", config["test"]["account_message_url"], "", function(req, resp, postData){
+        });
+      });
+      it("should with json having the same structure as defined", function(){
+        // TODO
+      });
+    });
+    describe("When partner send provision message || POST to <provisioned_service.messages_url>", function(){
+      it("should send a request", function(done){
+        // POST to the <service_account.messages_url> create a service_account message
+        dispatcher.once("provisioned_service_msg", function(request, response, postData){
+          // TODO for tenant
+          jsonData = JSON.parse(postData);
+          sendResponse(response, 201, {"Content-Type" : "application/json"}, "Created");
+          done();
+        })
+
+        sendRequest("PUT", config["test"]["provision_message_url"], "", function(req, resp, postData){
         });
 
-        done();
       });
       it("should with json having the same structure as defined", function(){
         // TODO
-        // engine yard returns 201 created
-      });
-    });
-    describe("When partner send provision message by POST to <provisioned_service.messages_url>", function(){
-      it("should with json having the same structure as defined", function(){
-        // TODO
-        // engine yard returns 201 created
       });
     });
   });
 
-  describe("Billing", function(){
-    describe("When partner send invoice by POST to <service_account.invoices_url>", function(){
+  describe("5) Billing", function(){
+    var jsonData = {};
+    describe("When partner send invoice || POST to <service_account.invoices_url>", function(){
+      it("should send a request", function(done){
+        // POST to the <service_account.messages_url> create a service_account message
+        dispatcher.once("invoices", function(request, response, postData){
+          // TODO for tenant
+          jsonData = JSON.parse(postData);
+          sendResponse(response, 201, {"Content-Type" : "application/json"}, "Created");
+          done();
+        })
+
+        sendRequest("PUT", config["test"]["invoices_url"], "", function(req, resp, postData){
+        });
+
+      });
       it("should with json having the same structure as defined", function(){
         // TODO
         // engine yard returns 201 created

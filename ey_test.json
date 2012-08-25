@@ -11,10 +11,4 @@
     "provision_message_url"    : "http://localhost:8080/ey/test/provision_message",
     "invoices_url"             : "http://localhost:8080/ey/test/invoices",
   },
-  
-  "registration" : {
-    "home_url"                 : "http://localhost:8080",
-    "terms_and_conditions_url" : "http://localhost:8080/ey/terms",
-    "create_account_url"       : "http://localhost:8080/ey/resources"
-  }
 }

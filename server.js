@@ -264,6 +264,50 @@ var ey_deprovision = function(response, pathname, data) {
   sendResponse(response, 200, {'Content-Type': 'application/json'}, "OK");
 }
 
+var ey_account_msg = function(response, pathname, data){
+  sendResponse(response, 200, {}, "Will send Registration request");
+  var reqJson = {
+    "message": {
+      "message_type": "notification",
+      "subject":      "That's a nice looking app deployment you've got there",
+      "body":         "And a db_slave, spiffy!",
+                      // Optional, will show as collapsed until user clicks 'read more'
+    }
+  };
+  sendRequest("POST", ey_registration_url, reqJson, function (request, response, postData){
+    console.log("%s[/]%s - account msg sent", GREEN, RESET);
+  });
+}
+
+var ey_provisioned_service_msg = function(response, pathname, data){
+  sendResponse(response, 200, {}, "Will send Registration request");
+  var reqJson = {
+    "message": {
+      "message_type": "notification",
+      "subject":      "That's a nice looking app deployment you've got there",
+      "body":         "And a db_slave, spiffy!",
+                      // Optional, will show as collapsed until user clicks 'read more'
+    }
+  }
+  sendRequest("POST", ey_registration_url, reqJson, function (request, response, postData){
+    console.log("%s[/]%s - provisioned service msg sent", GREEN, RESET);
+  });
+}
+
+var ey_billing = function(response, pathname, data){
+  sendResponse(response, 200, {}, "Will send Registration request");
+  var reqJson = {
+    "invoice":
+    {
+      "total_amount_cents":     "3050", //USD amount in cents ($30.50)
+      "line_item_description":  "Invoice ID: 122. For service from Jan 1 to Feb 1 of 2012, rendered in a complimentary fashion.",
+    }
+}
+  sendRequest("POST", ey_registration_url, reqJson, function (request, response, postData){
+    console.log("%s[/]%s - invoices sent", GREEN, RESET);
+  });
+}
+
 function isEmpty(map) {
   for (var name in map) {
     if (map.hasOwnProperty(name)) {
@@ -361,8 +405,14 @@ var handleRequest = function(request, response, postData){
     } else {
       sendResponse(response, 403, {'Content-Type': 'text/plain'}, "Access Denied");
     }    
-  } else if (pathname.search() >= 0 && method == "PUT") {
+  } else if (pathname.search("/ey/test/registration") >= 0 && method == "PUT") {
     ey_register_partner(response, pathname, postData);
+  } else if (pathname.search("/ey/test/account_message") >= 0 && method == "PUT") {
+    ey_register_partner(response, pathname, postData);
+  } else if (pathname.search("/ey/test/provision_message") >= 0 && method == "PUT") {
+    ey_register_partner(response, pathname, postData);
+  } else if (pathname.search("/ey/test/invoices") >= 0 && method == "PUT") {
+    ey_billing(response, pathname, postData);
   } else {
     logRequest(request, postData);
     sendResponse(response, 404, {'Content-Type': 'text/plain'}, "Page Not Found");
